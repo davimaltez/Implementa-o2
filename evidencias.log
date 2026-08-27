@@ -1,0 +1,16 @@
+Script started on 2026-08-26 21:35:10-03:00 [TERM="xterm-256color" TTY="/dev/pts/0" COLUMNS="139" LINES="11"]
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ date
+[?2004lWed Aug 26 21:35:14 -03 2026
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ whoami
+[?2004ldavi
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ pwd
+[?2004l/home/davi/Projetos/Implementa-o2
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ ./app[K[K[K[K[Kmake
+[?2004lgcc -c main.c
+gcc main.o -o app
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ ./m[Kapp
+[?2004lNúmero complexo formado ao final: c = -2.000000 + 1.500000i
+[?2004h]0;davi@computadordavi: ~/Projetos/Implementa-o2[01;32mdavi@computadordavi[00m:[01;34m~/Projetos/Implementa-o2[00m$ exit
+[?2004lexit
+
+Script done on 2026-08-26 21:35:46-03:00 [COMMAND_EXIT_CODE="0"]
