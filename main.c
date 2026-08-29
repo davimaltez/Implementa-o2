@@ -101,6 +101,8 @@ void * calcular_normal_pthread(void * arg){
         }
     }
 
+    return NULL;
+
 }
 
 int main(int argc, char *argv[]){ 
@@ -223,8 +225,31 @@ int main(int argc, char *argv[]){
     pthread_t threads[numero_threads];
     argumentos_threads dados[numero_threads];
 
+
     for(int i = 0; i < numero_threads; i++){
-        dados[i].
+        dados[i].max_interacoes = max_interacoes;
+        dados[i].largura = largura;
+        dados[i].altura = altura;
+
+        dados[i].interacoes = interacoes;
+
+        dados[i].intensidades = intensidades;
+
+        if(i == 0){
+            dados[i].inicio = 0;
+            dados[i].fim = altura/numero_threads;
+
+        }
+        //Para caso divisão não seja exata, sempre garanto que vai até o fim
+        else if(i == numero_threads - 1){
+            dados[i].inicio = dados[i - 1].fim;
+            dados[i].fim = altura;
+        }
+        else{
+            dados[i].inicio = dados[i - 1].fim;
+            dados[i].fim = dados[i].inicio + (altura/numero_threads);
+
+        }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
@@ -244,15 +269,17 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    for(int thread = 0; thread < numero_threads; thread++){
-        for(int py = 0; py < altura; py++){
-            for(int px = 0; px < largura; px++){
+
+    for(int py = 0; py < altura; py++){
+        for(int px = 0; px < largura; px++){
 
                 int indice = (py * largura) + px;
-                fprintf(arquivo_p_thread,"%d ",dados[thread].intensidades[indice]);
+                fprintf(arquivo_p_thread,"%d ",intensidades[indice]);
+
             }
+            fprintf(arquivo_p_thread,"\n");
         }
-    }
+    
 
     fclose(arquivo_p_thread);
 
@@ -263,9 +290,9 @@ int main(int argc, char *argv[]){
 
     FILE * arquivo_time_pthread = fopen("times.txt","a");
 
-    fprintf(arquivo_time,"Pthread1: %fs\n",tempo_decorrido);
+    fprintf(arquivo_time_pthread,"Pthread1: %fs\n",tempo_decorrido);
 
-    fclose(arquivo_time);
+    fclose(arquivo_time_pthread);
 
     return 0;
 }
