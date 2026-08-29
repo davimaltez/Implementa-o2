@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <omp.h>
+#include <time.h>
 
 #define x_min -2.0
 #define x_max 1.0
 #define y_max 1.5
 #define y_min -1.5
+
 
 typedef struct{
     float x;
@@ -71,13 +74,14 @@ int normalizar(int interacoes, int max_interacoes){
 
 int main(int argc, char *argv[]){ 
 
+
     if (argc < 5) {
         printf("Erro: faltam argumentos!\n");
         return 1;
     }
 
-    C * c = (C*)malloc(sizeof(C));
-    if(c == NULL){
+    C * c_serial = (C*)malloc(sizeof(C));
+    if(c_serial == NULL){
         printf("Erro: falha na alocação de memória");
         return 1;
     }
@@ -85,9 +89,9 @@ int main(int argc, char *argv[]){
     int largura = atoi(argv[1]);
     int altura = atoi(argv[2]);
     int max_interacoes = atoi(argv[3]);
-    int num_threads = atoi(argv[4]);
+    int numero_threads = atoi(argv[4]);
 
-    if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || num_threads <= 0){
+    if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || numero_threads <= 0){
         printf("Apenas números maiores ou iguais a 0 são permitidos");
         return -1;
     }
@@ -99,22 +103,37 @@ int main(int argc, char *argv[]){
     }
 
     int *intensidades = (int *) malloc((largura * altura) * sizeof(int));
+
     if(intensidades == NULL){
         printf("Erro: Não foi possível alocar memória");
         return -1;
     }
 
+    struct timespec tempo_inicio, tempo_fim;
+    clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
+
     for(int py = 0; py < altura; py++){
         for(int px = 0; px < largura; px++){
-
             int indice_no_vetor = (py * largura) + px;
-            interacoes[indice_no_vetor] = calcular_normal(px, py, largura, altura, max_interacoes, c);
+            interacoes[indice_no_vetor] = calcular_normal(px, py, largura, altura, max_interacoes, c_serial);
             intensidades[indice_no_vetor] = normalizar(interacoes[indice_no_vetor], max_interacoes);
             
         }
     }
+
+    clock_gettime(CLOCK_MONOTONIC, &tempo_fim);
+
+    double tempo_decorrido = (tempo_fim.tv_sec - tempo_inicio.tv_sec) + 
+                            (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
+
+    FILE * arquivo_time = fopen("times.txt","a");
+
+    fprintf(arquivo_time,"Serial: %fs\n",tempo_decorrido);
+
+    fclose(arquivo_time);
     
     FILE * arquivo = fopen("mandelbrot_dmcv_serial.pgm","w");
+
     if(arquivo == NULL){
         printf("Erro: falha ao abrir o arquivo");
     }
@@ -127,9 +146,46 @@ int main(int argc, char *argv[]){
         fprintf(arquivo,"\n");
     }
     fclose(arquivo);
-    free(interacoes);
-    free(intensidades);
-    free(c);
+
+    //Open MP
+    double inicio = omp_get_wtime();
+    for(int py = 0; py < altura; py++){
+        #pragma omp parallel for num_threads(numero_threads) schedule(static)
+        for(int px = 0; px < largura; px++){
+            C c_thread;
+            int indice_no_vetor = (py * largura) + px;
+            interacoes[indice_no_vetor] = calcular_normal(px, py, largura, altura, max_interacoes, &c_thread);
+            intensidades[indice_no_vetor] = normalizar(interacoes[indice_no_vetor], max_interacoes);
+            
+        }
+    }
+    double fim = omp_get_wtime();
+
+    FILE * arquivo_tempo = fopen("times.txt","a");
+
+    if(arquivo_tempo == NULL){
+        printf("Erro: falha ao abrir o arquivo");
+        return -1;
+    }
+
+    fprintf(arquivo_tempo, "OpenMp: %fs\n",(fim - inicio));
+    fclose(arquivo_tempo);
+
+    FILE * arquivo_openMP = fopen("mandelbrot_dmcv_openmp.pgm","w");
+        if(arquivo_openMP == NULL){
+        printf("Erro: falha ao abrir o arquivo");
+        return -1;
+    }
+
+    for(int py = 0; py < altura; py ++){
+        for(int px = 0; px < largura; px++){
+            int indice = (py * largura) + px;
+            fprintf(arquivo_openMP,"%d ",intensidades[indice]);
+        }
+        fprintf(arquivo_openMP,"\n");
+    }
+    fclose(arquivo_openMP);
+
     return 0;
 }
 
