@@ -1,2 +1,5 @@
 Serial: 0.002221s
 OpenMp: 0.001956s
+
+Serial: 0.001880s
+OpenMp: 0.001740s

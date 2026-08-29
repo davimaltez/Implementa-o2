@@ -150,7 +150,7 @@ int main(int argc, char *argv[]){
     //Open MP
     double inicio = omp_get_wtime();
     for(int py = 0; py < altura; py++){
-        #pragma omp parallel for num_threads(numero_threads) schedule(static)
+        #pragma omp parallel for num_threads(numero_threads) schedule(dynamic)
         for(int px = 0; px < largura; px++){
             C c_thread;
             int indice_no_vetor = (py * largura) + px;
