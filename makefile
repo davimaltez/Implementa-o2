@@ -1,13 +1,13 @@
-app: main.o 
-	gcc main.o -o app
+mandelbrot: main.o 
+	gcc main.o -o mandelbrot -lm
 
 main.o: main.c 
 	gcc -c main.c
 
-run: app
-	./main
+run: mandelbrot
+	./mandelbrot
 
 clean:
-	rm -f *.o app
+	rm -f *.o mandelbrot
 
-.PHONY: run clean
+.PHONY: all run clean

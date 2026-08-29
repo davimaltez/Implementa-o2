@@ -15,11 +15,11 @@ typedef struct{
 C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c ){
 
     //parte real
-    float x = x_min + (Px / (float)largura) * (x_max - x_min);
+    float x = x_min + (Px / (float)(largura)) * (x_max - x_min);
 
     //parte imaginária
     //Lembrar que a parte imaginária vem com aquele i, então eu não posso simplesmente somar com a parte real
-    float y = y_max - (Py/(float)altura) * (y_max - y_min);
+    float y = y_max - (Py/(float)(altura)) * (y_max - y_min);
 
     c->x = x;
     c->y = y;
@@ -28,7 +28,7 @@ C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c 
     return c;
 }
 
-void calcular_normal(int Px, int Py, int largura, int altura, int max_interacoes, C * c){
+int calcular_normal(int Px, int Py, int largura, int altura, int max_interacoes, C * c){
 
     double z_real = 0.0;
     double z_imaginario = 0.0;
@@ -54,21 +54,82 @@ void calcular_normal(int Px, int Py, int largura, int altura, int max_interacoes
         z_real = z_novo[0];
         z_imaginario = z_novo[1];
 
+        if((z_real * z_real) + (z_imaginario * z_imaginario) > 4.0){
+            return i + 1;
+        }
+
     }
 
-    printf("Número complexo formado ao final: c = %f + %fi\n",z_novo[0],z_novo[1]);
+    return max_interacoes;
 }
 
-int main(void){ 
+int normalizar(int interacoes, int max_interacoes){
+
+    return (interacoes/(double)max_interacoes) * 255;
+
+}
+
+int main(int argc, char *argv[]){ 
+
+    if (argc < 5) {
+        printf("Erro: faltam argumentos!\n");
+        return 1;
+    }
+
     C * c = (C*)malloc(sizeof(C));
-    int Px = 0;
-    int Py = 0;
-    int largura = 800;
-    int altura = 600;
-    int max_interacoes = 1;
+    if(c == NULL){
+        printf("Erro: falha na alocação de memória");
+        return 1;
+    }
 
-    calcular_normal(Px, Py, largura, altura, max_interacoes, c);
+    int largura = atoi(argv[1]);
+    int altura = atoi(argv[2]);
+    int max_interacoes = atoi(argv[3]);
+    int num_threads = atoi(argv[4]);
 
+    if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || num_threads <= 0){
+        printf("Apenas números maiores ou iguais a 0 são permitidos");
+        return -1;
+    }
+
+    int *interacoes = (int *) malloc((largura * altura) * sizeof(int));
+    if(interacoes == NULL){
+        printf("Erro: Não foi possível alocar memória");
+        return -1;
+    }
+
+    int *intensidades = (int *) malloc((largura * altura) * sizeof(int));
+    if(intensidades == NULL){
+        printf("Erro: Não foi possível alocar memória");
+        return -1;
+    }
+
+    for(int py = 0; py < altura; py++){
+        for(int px = 0; px < largura; px++){
+
+            int indice_no_vetor = (py * largura) + px;
+            interacoes[indice_no_vetor] = calcular_normal(px, py, largura, altura, max_interacoes, c);
+            intensidades[indice_no_vetor] = normalizar(interacoes[indice_no_vetor], max_interacoes);
+            
+        }
+    }
+    
+    FILE * arquivo = fopen("mandelbrot_dmcv_serial.pgm","w");
+    if(arquivo == NULL){
+        printf("Erro: falha ao abrir o arquivo");
+    }
+
+    for(int py = 0; py < altura; py ++){
+        for(int px = 0; px < largura; px++){
+            int indice = (py * largura) + px;
+            fprintf(arquivo,"%d ",intensidades[indice]);
+        }
+        fprintf(arquivo,"\n");
+    }
+    fclose(arquivo);
+    free(interacoes);
+    free(intensidades);
+    free(c);
     return 0;
 }
 
