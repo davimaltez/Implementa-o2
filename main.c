@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <time.h>
+#include <pthread.h>
 
 #define x_min -2.0
 #define x_max 1.0
@@ -14,6 +15,16 @@ typedef struct{
     float x;
     float y;
 }C;
+
+typedef struct{
+    int inicio;
+    int fim;
+    int max_interacoes;
+    int largura;
+    int altura;
+    int * interacoes;
+    int * intensidades;
+}argumentos_threads;
 
 C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c ){
 
@@ -31,44 +42,64 @@ C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c 
     return c;
 }
 
-int calcular_normal(int Px, int Py, int largura, int altura, int max_interacoes, C * c){
 
+int calcular_normal(int Px, int Py, int largura, int altura, int max_interacoes, C * c){
+    
     double z_real = 0.0;
     double z_imaginario = 0.0;
-
+    
     C * ponto_c = converter_pixel_para_complexo(Px, Py, largura, altura, c);
-
+    
     double c_real = c->x;
     double c_imaginario = c->y;
-
+    
     double z_novo[2];
     z_novo[0] = 0.0;
     z_novo[1] = 0.0;
-
+    
     //Fórmula para eu aplicar no loop: z = z^2 + c, onde c vai ser o retorno da função converter
     for(int i =  0; i < max_interacoes; i++){
-
+        
         //Parte Real
         z_novo[0] = (z_real * z_real) + c_real - (z_imaginario * z_imaginario);
-
+        
         //Parte Imaginária
         z_novo[1] = (2 * z_real * z_imaginario) + c_imaginario;
-
+        
         z_real = z_novo[0];
         z_imaginario = z_novo[1];
-
+        
         if((z_real * z_real) + (z_imaginario * z_imaginario) > 4.0){
             return i + 1;
         }
-
+        
     }
-
+    
     return max_interacoes;
 }
 
 int normalizar(int interacoes, int max_interacoes){
-
+    
     return (interacoes/(double)max_interacoes) * 255;
+    
+}
+
+void * calcular_normal_pthread(void * arg){
+
+    argumentos_threads * dados = (argumentos_threads *) arg;
+
+    C c_pthread;
+
+    for(int py = dados->inicio; py < dados->fim; py++){
+
+        for(int px = 0; px < dados->largura; px++){
+
+            int indice_no_vetor = (py * dados->largura) + px;
+            dados->interacoes[indice_no_vetor] = calcular_normal(px, py, dados->largura, dados->altura, dados->max_interacoes, &c_pthread);
+            dados->intensidades[indice_no_vetor] = normalizar(dados->interacoes[indice_no_vetor], dados->max_interacoes);
+
+        }
+    }
 
 }
 
@@ -149,8 +180,8 @@ int main(int argc, char *argv[]){
 
     //Open MP
     double inicio = omp_get_wtime();
+    #pragma omp parallel for num_threads(numero_threads) schedule(dynamic)
     for(int py = 0; py < altura; py++){
-        #pragma omp parallel for num_threads(numero_threads) schedule(dynamic)
         for(int px = 0; px < largura; px++){
             C c_thread;
             int indice_no_vetor = (py * largura) + px;
@@ -172,7 +203,8 @@ int main(int argc, char *argv[]){
     fclose(arquivo_tempo);
 
     FILE * arquivo_openMP = fopen("mandelbrot_dmcv_openmp.pgm","w");
-        if(arquivo_openMP == NULL){
+    
+    if(arquivo_openMP == NULL){
         printf("Erro: falha ao abrir o arquivo");
         return -1;
     }
@@ -185,6 +217,55 @@ int main(int argc, char *argv[]){
         fprintf(arquivo_openMP,"\n");
     }
     fclose(arquivo_openMP);
+
+    //P_thread
+
+    pthread_t threads[numero_threads];
+    argumentos_threads dados[numero_threads];
+
+    for(int i = 0; i < numero_threads; i++){
+        dados[i].
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
+
+
+    for(int i = 0; i < numero_threads; i++){
+        pthread_create(&threads[i],NULL,calcular_normal_pthread,&dados[i]);
+    }
+
+    for(int i = 0; i < numero_threads; i++){
+        pthread_join(threads[i],NULL);
+    }
+
+    FILE * arquivo_p_thread = fopen("mandelbrot_dmcv_pthreads1.pgm","w");
+    if(arquivo_p_thread == NULL){
+        printf("Erro: falha ao abrir arquivo");
+        return -1;
+    }
+
+    for(int thread = 0; thread < numero_threads; thread++){
+        for(int py = 0; py < altura; py++){
+            for(int px = 0; px < largura; px++){
+
+                int indice = (py * largura) + px;
+                fprintf(arquivo_p_thread,"%d ",dados[thread].intensidades[indice]);
+            }
+        }
+    }
+
+    fclose(arquivo_p_thread);
+
+    clock_gettime(CLOCK_MONOTONIC, &tempo_fim);
+
+    tempo_decorrido = (tempo_fim.tv_sec - tempo_inicio.tv_sec) + 
+                            (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
+
+    FILE * arquivo_time_pthread = fopen("times.txt","a");
+
+    fprintf(arquivo_time,"Pthread1: %fs\n",tempo_decorrido);
+
+    fclose(arquivo_time);
 
     return 0;
 }

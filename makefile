@@ -1,5 +1,5 @@
 mandelbrot: main.o 
-	gcc -fopenmp main.o -o mandelbrot -lm
+	gcc -fopenmp -pthread main.o -o mandelbrot -lm
 
 main.o: main.c 
 	gcc -c main.c

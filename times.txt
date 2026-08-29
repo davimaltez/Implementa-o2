@@ -1,5 +1,8 @@
-Serial: 0.002221s
-OpenMp: 0.001956s
-
-Serial: 0.001880s
-OpenMp: 0.001740s
+Serial: 0.002378s
+OpenMp: 0.001789s
+Serial: 0.044589s
+OpenMp: 0.041885s
+Serial: 0.001927s
+OpenMp: 0.001936s
+Serial: 0.053589s
+OpenMp: 0.040586s
