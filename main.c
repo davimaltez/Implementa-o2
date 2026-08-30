@@ -4,6 +4,7 @@
 #include <omp.h>
 #include <time.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #define x_min -2.0
 #define x_max 1.0
@@ -151,11 +152,13 @@ int main(int argc, char *argv[]){
 
     if (argc < 5) {
         fprintf(arquivo_erros, "Erro: faltam argumentos!\n");
+        fclose(arquivo_erros);
         return 1;
     }
 
     if(argc > 5){
         fprintf(arquivo_erros, "Erro: Muitos argumentos!\n");
+        fclose(arquivo_erros);
         return -1;
     }
 
@@ -173,6 +176,23 @@ int main(int argc, char *argv[]){
 
     if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || numero_threads <= 0){
         fprintf(arquivo_erros,"Apenas números maiores ou iguais a 0 são permitidos");
+        fclose(arquivo_erros);
+        return -1;
+    }
+
+    long nucleos = sysconf(_SC_NPROCESSORS_ONLN);
+    int limite_threads;
+
+    if(nucleos > 0){
+        limite_threads = (int)(nucleos * 10);
+    } 
+    //Caso s função não consiga determinar a quantidade de núcleos
+    else {
+        limite_threads = 256;
+    }
+
+    if(numero_threads > limite_threads){
+        fprintf(arquivo_erros, "Erro: número de threads excede o limite razoável (%d) para esta máquina\n", limite_threads);
         fclose(arquivo_erros);
         return -1;
     }
