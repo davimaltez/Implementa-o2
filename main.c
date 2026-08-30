@@ -24,6 +24,10 @@ typedef struct{
     int altura;
     int * interacoes;
     int * intensidades;
+
+    int *proxima_linha;
+    pthread_mutex_t * fila_mutex;
+
 }argumentos_threads;
 
 C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c ){
@@ -102,20 +106,58 @@ void * calcular_normal_pthread(void * arg){
     }
 
     return NULL;
+}
 
+
+void * calcular_normal_pthread2(void * arg){
+
+    argumentos_threads * dados = (argumentos_threads *) arg;
+
+    C c_pthread2;
+
+    while(1){
+
+        pthread_mutex_lock(dados->fila_mutex);
+
+        int linha_atual = *dados->proxima_linha;
+        *dados->proxima_linha = *dados->proxima_linha + 1;
+
+        pthread_mutex_unlock(dados->fila_mutex);
+
+        if(linha_atual >= dados->altura){
+            break;
+        }
+
+
+        for(int px = 0; px < dados->largura; px++){
+
+            int indice_no_vetor = (linha_atual * dados->largura) + px;
+            dados->interacoes[indice_no_vetor] = calcular_normal(px, linha_atual, dados->largura, dados->altura, dados->max_interacoes, &c_pthread2);
+            dados->intensidades[indice_no_vetor] = normalizar(dados->interacoes[indice_no_vetor], dados->max_interacoes);
+
+        }
+
+    }
+
+    return NULL;
 }
 
 int main(int argc, char *argv[]){ 
 
+    FILE * arquivo_erros = fopen("erros.txt","w");
+    if(arquivo_erros == NULL){
+        return -1;
+    }
 
     if (argc < 5) {
-        printf("Erro: faltam argumentos!\n");
+        fprintf(arquivo_erros, "Erro: faltam argumentos!\n");
         return 1;
     }
 
     C * c_serial = (C*)malloc(sizeof(C));
     if(c_serial == NULL){
-        printf("Erro: falha na alocação de memória");
+        fprintf(arquivo_erros,"Erro: falha na alocação de memória");
+        fclose(arquivo_erros);
         return 1;
     }
 
@@ -125,20 +167,23 @@ int main(int argc, char *argv[]){
     int numero_threads = atoi(argv[4]);
 
     if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || numero_threads <= 0){
-        printf("Apenas números maiores ou iguais a 0 são permitidos");
+        fprintf(arquivo_erros,"Apenas números maiores ou iguais a 0 são permitidos");
+        fclose(arquivo_erros);
         return -1;
     }
 
     int *interacoes = (int *) malloc((largura * altura) * sizeof(int));
     if(interacoes == NULL){
-        printf("Erro: Não foi possível alocar memória");
+        fprintf(arquivo_erros,"Erro: Não foi possível alocar memória");
+        fclose(arquivo_erros);
         return -1;
     }
 
     int *intensidades = (int *) malloc((largura * altura) * sizeof(int));
 
     if(intensidades == NULL){
-        printf("Erro: Não foi possível alocar memória");
+        fprintf(arquivo_erros,"Erro: Não foi possível alocar memória");
+        fclose(arquivo_erros);
         return -1;
     }
 
@@ -160,6 +205,11 @@ int main(int argc, char *argv[]){
                             (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
 
     FILE * arquivo_time = fopen("times.txt","a");
+    if(arquivo_time == NULL){
+        fprintf(arquivo_erros,"Erro: Não foi possível abrir o arquivo de registro de tempo");
+        fclose(arquivo_erros);
+        return -1;
+    }
 
     fprintf(arquivo_time,"Serial: %fs\n",tempo_decorrido);
 
@@ -168,7 +218,9 @@ int main(int argc, char *argv[]){
     FILE * arquivo = fopen("mandelbrot_dmcv_serial.pgm","w");
 
     if(arquivo == NULL){
-        printf("Erro: falha ao abrir o arquivo");
+        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo serial");
+        fclose(arquivo_erros);
+        return -1;
     }
 
     for(int py = 0; py < altura; py ++){
@@ -197,7 +249,8 @@ int main(int argc, char *argv[]){
     FILE * arquivo_tempo = fopen("times.txt","a");
 
     if(arquivo_tempo == NULL){
-        printf("Erro: falha ao abrir o arquivo");
+        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de registro de tempo");
+        fclose(arquivo_erros);
         return -1;
     }
 
@@ -207,7 +260,8 @@ int main(int argc, char *argv[]){
     FILE * arquivo_openMP = fopen("mandelbrot_dmcv_openmp.pgm","w");
     
     if(arquivo_openMP == NULL){
-        printf("Erro: falha ao abrir o arquivo");
+        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo OpenMP");
+        fclose(arquivo_erros);
         return -1;
     }
 
@@ -255,8 +309,16 @@ int main(int argc, char *argv[]){
     clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
 
 
+    int status_pthread;
+
     for(int i = 0; i < numero_threads; i++){
-        pthread_create(&threads[i],NULL,calcular_normal_pthread,&dados[i]);
+        status_pthread = pthread_create(&threads[i],NULL,calcular_normal_pthread,&dados[i]);
+
+        if(status_pthread != 0){
+            fprintf(arquivo_erros,"Erro: Não foi possível criar a thread");
+            fclose(arquivo_erros);
+            return -1;
+        }
     }
 
     for(int i = 0; i < numero_threads; i++){
@@ -265,7 +327,8 @@ int main(int argc, char *argv[]){
 
     FILE * arquivo_p_thread = fopen("mandelbrot_dmcv_pthreads1.pgm","w");
     if(arquivo_p_thread == NULL){
-        printf("Erro: falha ao abrir arquivo");
+        fprintf(arquivo_erros,"Erro: falha ao abrir arquivo do pthread");
+        fclose(arquivo_erros);
         return -1;
     }
 
@@ -289,11 +352,102 @@ int main(int argc, char *argv[]){
                             (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
 
     FILE * arquivo_time_pthread = fopen("times.txt","a");
+    if(arquivo_time_pthread == NULL){
+        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de tempo");
+        fclose(arquivo_erros);
+        return -1;
+    }
 
     fprintf(arquivo_time_pthread,"Pthread1: %fs\n",tempo_decorrido);
 
     fclose(arquivo_time_pthread);
 
+    //P_thread2
+
+
+    int proxima_linha = 0;
+    pthread_mutex_t fila_mutex;
+    pthread_mutex_init(&fila_mutex, NULL);
+
+
+    for(int i = 0; i < numero_threads; i++){
+        dados[i].max_interacoes = max_interacoes;
+        dados[i].largura = largura;
+        dados[i].altura = altura;
+
+        dados[i].interacoes = interacoes;
+
+        dados[i].intensidades = intensidades;
+
+        dados[i].proxima_linha = &proxima_linha;
+
+        dados[i].fila_mutex = &fila_mutex;
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
+
+
+    int status_pthread2;
+
+    for(int i = 0; i < numero_threads; i++){
+        status_pthread2 = pthread_create(&threads[i],NULL,calcular_normal_pthread2,&dados[i]);
+
+        if(status_pthread2 != 0){
+            fprintf(arquivo_erros,"Erro: Não foi possível criar a thread");
+            fclose(arquivo_erros);
+            return -1;
+        }
+    }
+
+    for(int i = 0; i < numero_threads; i++){
+        pthread_join(threads[i],NULL);
+    }
+
+    pthread_mutex_destroy(&fila_mutex);
+
+    FILE * arquivo_p_thread2 = fopen("mandelbrot_dmcv_pthreads2.pgm","w");
+    if(arquivo_p_thread2 == NULL){
+        fprintf(arquivo_erros,"Erro: falha ao abrir arquivo do pthread");
+        fclose(arquivo_erros);
+        return -1;
+    }
+
+
+    for(int py = 0; py < altura; py++){
+        for(int px = 0; px < largura; px++){
+
+                int indice = (py * largura) + px;
+                fprintf(arquivo_p_thread2,"%d ",intensidades[indice]);
+
+            }
+            fprintf(arquivo_p_thread2,"\n");
+        }
+    
+
+    fclose(arquivo_p_thread2);
+
+    clock_gettime(CLOCK_MONOTONIC, &tempo_fim);
+
+    tempo_decorrido = (tempo_fim.tv_sec - tempo_inicio.tv_sec) + 
+                            (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
+
+    FILE * arquivo_time_pthread2 = fopen("times.txt","a");
+    if(arquivo_time_pthread2 == NULL){
+        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de tempo");
+        fclose(arquivo_erros);
+        return -1;
+    }
+
+    fprintf(arquivo_time_pthread2,"Pthread2: %fs\n",tempo_decorrido);
+
+    fclose(arquivo_time_pthread2);
+
+
+    fclose(arquivo_erros);
+
+    free(c_serial);
+    free(interacoes);
+    free(intensidades);
+
     return 0;
 }
-
