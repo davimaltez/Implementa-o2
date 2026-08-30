@@ -154,6 +154,11 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
+    if(argc > 5){
+        fprintf(arquivo_erros, "Erro: Muitos argumentos!\n");
+        return -1;
+    }
+
     C * c_serial = (C*)malloc(sizeof(C));
     if(c_serial == NULL){
         fprintf(arquivo_erros,"Erro: falha na alocação de memória");
