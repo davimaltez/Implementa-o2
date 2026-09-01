@@ -13,8 +13,8 @@
 
 
 typedef struct{
-    float x;
-    float y;
+    double x;
+    double y;
 }C;
 
 typedef struct{
@@ -34,11 +34,11 @@ typedef struct{
 C* converter_pixel_para_complexo(int Px, int Py, int largura, int altura, C * c ){
 
     //parte real
-    float x = x_min + (Px / (float)(largura)) * (x_max - x_min);
+    double x = x_min + (Px / (double)(largura)) * (x_max - x_min);
 
     //parte imaginária
     //Lembrar que a parte imaginária vem com aquele i, então eu não posso simplesmente somar com a parte real
-    float y = y_max - (Py/(float)(altura)) * (y_max - y_min);
+    double y = y_max - (Py/(double)(altura)) * (y_max - y_min);
 
     c->x = x;
     c->y = y;
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]){
     int numero_threads = atoi(argv[4]);
 
     if(largura <= 0 || altura <= 0 || max_interacoes <= 0 || numero_threads <= 0){
-        fprintf(arquivo_erros,"Apenas números maiores ou iguais a 0 são permitidos");
+        fprintf(arquivo_erros, "Erro: largura, altura, max_iteracoes e num_threads devem ser inteiros maiores que 0\n");
         fclose(arquivo_erros);
         return -1;
     }
@@ -213,6 +213,7 @@ int main(int argc, char *argv[]){
     }
 
     struct timespec tempo_inicio, tempo_fim;
+    
     clock_gettime(CLOCK_MONOTONIC, &tempo_inicio);
 
     for(int py = 0; py < altura; py++){
@@ -238,7 +239,7 @@ int main(int argc, char *argv[]){
 
     fprintf(arquivo_time,"Serial: %fs\n",tempo_decorrido);
 
-    fclose(arquivo_time);
+
     
     FILE * arquivo = fopen("mandelbrot_dmcv_serial.pgm","w");
 
@@ -271,16 +272,8 @@ int main(int argc, char *argv[]){
     }
     double fim = omp_get_wtime();
 
-    FILE * arquivo_tempo = fopen("times.txt","a");
 
-    if(arquivo_tempo == NULL){
-        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de registro de tempo");
-        fclose(arquivo_erros);
-        return -1;
-    }
-
-    fprintf(arquivo_tempo, "OpenMp: %fs\n",(fim - inicio));
-    fclose(arquivo_tempo);
+    fprintf(arquivo_time, "OpenMp: %fs\n",(fim - inicio));
 
     FILE * arquivo_openMP = fopen("mandelbrot_dmcv_openmp.pgm","w");
     
@@ -376,16 +369,11 @@ int main(int argc, char *argv[]){
     tempo_decorrido = (tempo_fim.tv_sec - tempo_inicio.tv_sec) + 
                             (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
 
-    FILE * arquivo_time_pthread = fopen("times.txt","a");
-    if(arquivo_time_pthread == NULL){
-        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de tempo");
-        fclose(arquivo_erros);
-        return -1;
-    }
 
-    fprintf(arquivo_time_pthread,"Pthread1: %fs\n",tempo_decorrido);
 
-    fclose(arquivo_time_pthread);
+    fprintf(arquivo_time,"Pthread1: %fs\n",tempo_decorrido);
+
+
 
     //P_thread2
 
@@ -456,20 +444,11 @@ int main(int argc, char *argv[]){
     tempo_decorrido = (tempo_fim.tv_sec - tempo_inicio.tv_sec) + 
                             (tempo_fim.tv_nsec - tempo_inicio.tv_nsec) / 1e9;
 
-    FILE * arquivo_time_pthread2 = fopen("times.txt","a");
-    if(arquivo_time_pthread2 == NULL){
-        fprintf(arquivo_erros,"Erro: falha ao abrir o arquivo de tempo");
-        fclose(arquivo_erros);
-        return -1;
-    }
-
-    fprintf(arquivo_time_pthread2,"Pthread2: %fs\n",tempo_decorrido);
-
-    fclose(arquivo_time_pthread2);
 
 
-    fclose(arquivo_erros);
+    fprintf(arquivo_time,"Pthread2: %fs\n",tempo_decorrido);
 
+    fclose(arquivo_time);
     free(c_serial);
     free(interacoes);
     free(intensidades);
