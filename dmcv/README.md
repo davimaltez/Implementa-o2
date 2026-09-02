@@ -72,7 +72,7 @@ O programa não imprime nada na saída padrão (stdout) durante a execução nor
 
 - **OpenMP**: paraleliza o loop externo (linhas da imagem) com `#pragma omp parallel for`, usando `schedule(dynamic)` — testes mostraram tempo menor que `schedule(static)`, já que o custo de cálculo varia entre pixels dentro e fora do conjunto.
 - **Pthreads — Estratégia 1 (blocos fixos)**: cada thread recebe, antes da execução, um intervalo contíguo e fixo de linhas para processar. A última thread absorve eventuais linhas restantes quando a altura não é múltipla do número de threads.
-- **Pthreads — Estratégia 2 (fila de trabalho dinâmica)**: as threads compartilham um contador de "próxima linha disponível", protegido por mutex. Cada thread, ao ficar livre, pega a próxima linha da fila, o que tende a balancear melhor a carga entre threads quando o custo de cálculo é desigual entre elas.
+- **Pthreads — Estratégia 2 (fila de trabalho dinâmica)**: as threads compartilham um contador de "próxima linha disponível", protegido por mutex. Cada thread, ao ficar livre, pega a próxima linha da fila e faz a normalização de todos os valores daquela linha em específico
 
 ## Tratamento de erros
 
